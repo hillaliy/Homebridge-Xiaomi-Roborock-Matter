@@ -40,6 +40,7 @@ class RoborockClient {
         this.token = token;
         this.log = log;
         this.device = null;
+        this.model = null;
     }
     async connect() {
         try {
@@ -49,7 +50,8 @@ class RoborockClient {
             }
             this.log.info(`[Roborock ${this.ip}] Connecting over miio`);
             this.device = await miio_1.default.device({ address: this.ip, token: this.token });
-            this.log.info(`[Roborock] Connected to ${this.ip} (model: ${this.device.miioModel ?? 'unknown'})`);
+            this.model = this.device.miioModel ?? null;
+            this.log.info(`[Roborock] Connected to ${this.ip} (model: ${this.getModel()})`);
         }
         catch (err) {
             this.log.error(`[Roborock] Failed to connect to ${this.ip}: ${err}`);
@@ -58,6 +60,9 @@ class RoborockClient {
     }
     isConnected() {
         return Boolean(this.device);
+    }
+    getModel() {
+        return this.model ?? 'Roborock';
     }
     async getState() {
         this.assertConnected();
@@ -128,6 +133,7 @@ class RoborockClient {
         this.log.debug(`[Roborock ${this.ip}] Destroying miio client`);
         this.device?.destroy?.();
         this.device = null;
+        this.model = null;
     }
 }
 exports.RoborockClient = RoborockClient;

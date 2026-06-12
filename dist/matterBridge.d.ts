@@ -26,12 +26,14 @@ export declare class MatterVacuumBridge {
     private uuid;
     private accessory;
     private lastStateSummary;
+    private model;
     constructor(config: RoborockDeviceConfig, client: RoborockClient, api: API, log: Logger, cachedAccessories: Map<string, MatterAccessory>);
     /**
      * Register the device with Homebridge's Matter API.
      * Call this after api.matter is confirmed available.
      */
     start(): Promise<void>;
+    updateModel(model: string): Promise<void>;
     /**
      * Push the latest device state into the Matter clusters.
      * Call this from your poll loop whenever the Roborock state changes.

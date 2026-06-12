@@ -51,6 +51,7 @@ const FAN_SPEED_MAP: Record<number, number> = {
 
 export class RoborockClient {
   private device: any = null;
+  private model: string | null = null;
 
   constructor(
     private readonly ip: string,
@@ -67,8 +68,9 @@ export class RoborockClient {
 
       this.log.info(`[Roborock ${this.ip}] Connecting over miio`);
       this.device = await miio.device({ address: this.ip, token: this.token });
+      this.model = this.device.miioModel ?? null;
       this.log.info(
-        `[Roborock] Connected to ${this.ip} (model: ${this.device.miioModel ?? 'unknown'})`,
+        `[Roborock] Connected to ${this.ip} (model: ${this.getModel()})`,
       );
     } catch (err) {
       this.log.error(`[Roborock] Failed to connect to ${this.ip}: ${err}`);
@@ -78,6 +80,10 @@ export class RoborockClient {
 
   isConnected(): boolean {
     return Boolean(this.device);
+  }
+
+  getModel(): string {
+    return this.model ?? 'Roborock';
   }
 
   async getState(): Promise<RoborockState> {
@@ -160,5 +166,6 @@ export class RoborockClient {
     this.log.debug(`[Roborock ${this.ip}] Destroying miio client`);
     this.device?.destroy?.();
     this.device = null;
+    this.model = null;
   }
 }

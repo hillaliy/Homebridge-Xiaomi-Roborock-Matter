@@ -70,6 +70,14 @@ class RoborockMatterPlatform {
         const client = new roborockClient_1.RoborockClient(ip, token, this.log);
         const bridge = new matterBridge_1.MatterVacuumBridge(deviceConfig, client, this.api, this.log, this.matterAccessories);
         try {
+            await client.connect();
+            await bridge.updateModel(client.getModel());
+            this.log.info(`Detected "${name}" miio model before Matter registration: ${client.getModel()}`);
+        }
+        catch (err) {
+            this.log.warn(`Could not detect model for "${name}" before Matter registration: ${err}. Using fallback model until the robot connects.`);
+        }
+        try {
             this.log.info(`Registering "${name}" as a Matter robotic vacuum`);
             await bridge.start();
         }
@@ -87,10 +95,14 @@ class RoborockMatterPlatform {
         // Initial connection and state push. If this fails, the poll loop keeps
         // retrying so the Matter device can still be discovered and commissioned.
         try {
-            await client.connect();
+            if (!client.isConnected()) {
+                await client.connect();
+                await bridge.updateModel(client.getModel());
+            }
+            await bridge.updateModel(client.getModel());
             const state = await client.getState();
             await bridge.updateState(state);
-            this.log.info(`Initial state for "${name}": status=${state.status}, battery=${state.batteryLevel}%, fan=${state.fanSpeed}%, error=${state.errorCode}`);
+            this.log.info(`Initial state for "${name}" (${client.getModel()}): status=${state.status}, battery=${state.batteryLevel}%, fan=${state.fanSpeed}%, error=${state.errorCode}`);
         }
         catch (err) {
             this.log.warn(`Could not connect to "${name}" or fetch initial state yet: ${err}. Will retry every ${pollInterval} ms.`);
@@ -102,6 +114,7 @@ class RoborockMatterPlatform {
                 if (!client.isConnected()) {
                     this.log.info(`[Roborock] "${name}" is offline, retrying connection`);
                     await client.connect();
+                    await bridge.updateModel(client.getModel());
                 }
                 const state = await client.getState();
                 await bridge.updateState(state);

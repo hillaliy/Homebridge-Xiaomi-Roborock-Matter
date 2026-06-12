@@ -26,9 +26,8 @@ const CLEAN_MODE_BALANCED = 1;
 const CLEAN_MODE_TURBO = 2;
 const CLEAN_MODE_MAX = 3;
 // ── Matter RVC mode tags ────────────────────────────────────────────────────
-const MODE_TAG_QUIET = 0x0002;
-const MODE_TAG_MAX = 0x0007;
-const MODE_TAG_DEEP_CLEAN = 0x4000;
+// Apple Home displays some semantic tags as the selectable mode names. Keep
+// fan speeds as labels and only add the required Vacuum tag to each option.
 const MODE_TAG_VACUUM = 0x4001;
 // ── RvcOperationalState values (from Matter spec / matter.js) ────────────────
 // These numeric values are stable across matter.js versions.
@@ -87,6 +86,10 @@ function roborockErrorToMatterError(errorCode) {
         errorStateDetails: `Roborock error code ${errorCode}`,
     };
 }
+function normalizeModel(model) {
+    const trimmed = model.trim();
+    return (trimmed || 'Roborock').slice(0, 32);
+}
 class MatterVacuumBridge {
     constructor(config, client, api, log, cachedAccessories) {
         this.config = config;
@@ -98,6 +101,7 @@ class MatterVacuumBridge {
         this.uuid = null;
         this.accessory = null;
         this.lastStateSummary = null;
+        this.model = 'Roborock';
     }
     /**
      * Register the device with Homebridge's Matter API.
@@ -121,12 +125,13 @@ class MatterVacuumBridge {
             deviceType: matter.deviceTypes.RoboticVacuumCleaner,
             serialNumber: ip.replace(/\./g, ''),
             manufacturer: 'Xiaomi',
-            model: 'Roborock',
+            model: this.model,
             firmwareRevision: '1.0.0',
             context: {
                 ...(cachedAccessory?.context ?? {}),
                 ip,
                 name,
+                model: this.model,
             },
             // ── Initial cluster state ──────────────────────────────────────────────
             // Homebridge persists and restores this after first creation.
@@ -151,7 +156,7 @@ class MatterVacuumBridge {
                         {
                             label: 'Quiet',
                             mode: CLEAN_MODE_QUIET,
-                            modeTags: [{ value: MODE_TAG_VACUUM }, { value: MODE_TAG_QUIET }],
+                            modeTags: [{ value: MODE_TAG_VACUUM }],
                         },
                         {
                             label: 'Balanced',
@@ -161,15 +166,12 @@ class MatterVacuumBridge {
                         {
                             label: 'Turbo',
                             mode: CLEAN_MODE_TURBO,
-                            modeTags: [
-                                { value: MODE_TAG_VACUUM },
-                                { value: MODE_TAG_DEEP_CLEAN },
-                            ],
+                            modeTags: [{ value: MODE_TAG_VACUUM }],
                         },
                         {
                             label: 'Max',
                             mode: CLEAN_MODE_MAX,
-                            modeTags: [{ value: MODE_TAG_VACUUM }, { value: MODE_TAG_MAX }],
+                            modeTags: [{ value: MODE_TAG_VACUUM }],
                         },
                     ],
                     currentMode: CLEAN_MODE_BALANCED,
@@ -261,6 +263,28 @@ class MatterVacuumBridge {
             accessory,
         ]);
         this.log.info(`[Matter] "${name}" registration request accepted by Homebridge Matter API.`);
+    }
+    async updateModel(model) {
+        const normalizedModel = normalizeModel(model);
+        if (normalizedModel === this.model) {
+            return;
+        }
+        this.model = normalizedModel;
+        if (!this.accessory) {
+            return;
+        }
+        this.accessory.model = normalizedModel;
+        this.accessory.context = {
+            ...this.accessory.context,
+            model: normalizedModel,
+        };
+        try {
+            await this.api.matter?.updatePlatformAccessories([this.accessory]);
+            this.log.info(`[Matter] "${this.config.name}" model updated from miio: ${normalizedModel}`);
+        }
+        catch (err) {
+            this.log.warn(`[Matter] Failed to update model for "${this.config.name}": ${err}`);
+        }
     }
     /**
      * Push the latest device state into the Matter clusters.

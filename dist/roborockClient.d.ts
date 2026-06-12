@@ -13,9 +13,11 @@ export declare class RoborockClient {
     private readonly token;
     private readonly log;
     private device;
+    private model;
     constructor(ip: string, token: string, log: Logger);
     connect(): Promise<void>;
     isConnected(): boolean;
+    getModel(): string;
     getState(): Promise<RoborockState>;
     startCleaning(): Promise<void>;
     pauseCleaning(): Promise<void>;

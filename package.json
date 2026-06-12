@@ -4,6 +4,11 @@
   "description": "Homebridge plugin exposing Xiaomi Roborock vacuums as Matter RoboticVacuumCleaner devices",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "config.schema.json",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
