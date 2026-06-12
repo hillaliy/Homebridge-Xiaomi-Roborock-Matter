@@ -1,0 +1,63 @@
+{
+  "pluginAlias": "XiaomiRoborockMatter",
+  "pluginType": "platform",
+  "singular": true,
+  "headerDisplay": "Expose Xiaomi Roborock vacuums as Matter Robotic Vacuum Cleaner devices.",
+  "footerDisplay": "The miio token is stored in Homebridge config and is never printed by this plugin.",
+  "schema": {
+    "type": "object",
+    "required": ["devices"],
+    "properties": {
+      "devices": {
+        "title": "Roborock Devices",
+        "type": "array",
+        "minItems": 1,
+        "items": {
+          "title": "Roborock Device",
+          "type": "object",
+          "required": ["name", "ip", "token"],
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "title": "Name",
+              "type": "string",
+              "default": "Roborock"
+            },
+            "ip": {
+              "title": "IP Address",
+              "type": "string",
+              "format": "ipv4",
+              "placeholder": "192.168.1.100"
+            },
+            "token": {
+              "title": "miio Token",
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{32}$",
+              "minLength": 32,
+              "maxLength": 32,
+              "placeholder": "32-character hex token"
+            },
+            "pollInterval": {
+              "title": "Poll Interval (ms)",
+              "type": "integer",
+              "minimum": 2000,
+              "default": 10000
+            }
+          }
+        }
+      }
+    }
+  },
+  "layout": [
+    {
+      "key": "devices",
+      "type": "array",
+      "items": [
+        "devices[].name",
+        "devices[].ip",
+        "devices[].token",
+        "devices[].pollInterval"
+      ]
+    }
+  ]
+}
