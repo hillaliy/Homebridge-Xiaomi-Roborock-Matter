@@ -30,7 +30,7 @@ This plugin is designed to keep runtime control local. Xiaomi Cloud is not used 
 - Matter Robotic Vacuum Cleaner accessory registration through Homebridge 2.x
 - Local Roborock control over miio
 - Start, pause, resume, and return-to-dock commands
-- Quiet, Balanced, Turbo, and Max clean modes
+- Quiet, Vacuum, Deep Clean, and Max clean modes
 - Battery and operational-state updates
 - miio model metadata when the vacuum reports it
 - Homebridge UI configuration schema
@@ -99,7 +99,7 @@ If the vacuum does not appear:
 | Pause | `app_pause` |
 | Resume | `app_start` |
 | Return to dock | `app_charge` |
-| Quiet / Balanced / Turbo / Max | `set_custom_mode` |
+| Quiet / Vacuum / Deep Clean / Max | `set_custom_mode` |
 
 Mop-specific controls are not exposed yet. Mop-capable Roborock models usually require additional model-specific miio commands, so this plugin currently presents the device as a vacuum cleaner.
 

@@ -1,5 +1,6 @@
 export const PLUGIN_NAME = 'homebridge-xiaomi-roborock-matter';
 export const PLATFORM_NAME = 'XiaomiRoborockMatter';
+export const PLUGIN_VERSION = '1.0.2';
 
 /** Shape of a single device in config.json */
 export interface RoborockDeviceConfig {

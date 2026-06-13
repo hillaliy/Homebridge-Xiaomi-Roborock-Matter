@@ -26,8 +26,11 @@ const CLEAN_MODE_BALANCED = 1;
 const CLEAN_MODE_TURBO = 2;
 const CLEAN_MODE_MAX = 3;
 // ── Matter RVC mode tags ────────────────────────────────────────────────────
-// Apple Home displays some semantic tags as the selectable mode names. Keep
-// fan speeds as labels and only add the required Vacuum tag to each option.
+// Apple Home displays these semantic tags as mode names. The Roborock fan
+// levels therefore appear as Quiet, Vacuum, Deep Clean, and Max.
+const MODE_TAG_QUIET = 0x0002;
+const MODE_TAG_MAX = 0x0007;
+const MODE_TAG_DEEP_CLEAN = 0x4000;
 const MODE_TAG_VACUUM = 0x4001;
 // ── RvcOperationalState values (from Matter spec / matter.js) ────────────────
 // These numeric values are stable across matter.js versions.
@@ -126,7 +129,7 @@ class MatterVacuumBridge {
             serialNumber: ip.replace(/\./g, ''),
             manufacturer: 'Xiaomi',
             model: this.model,
-            firmwareRevision: '1.0.0',
+            firmwareRevision: settings_1.PLUGIN_VERSION,
             context: {
                 ...(cachedAccessory?.context ?? {}),
                 ip,
@@ -156,22 +159,22 @@ class MatterVacuumBridge {
                         {
                             label: 'Quiet',
                             mode: CLEAN_MODE_QUIET,
-                            modeTags: [{ value: MODE_TAG_VACUUM }],
+                            modeTags: [{ value: MODE_TAG_QUIET }],
                         },
                         {
-                            label: 'Balanced',
+                            label: 'Vacuum',
                             mode: CLEAN_MODE_BALANCED,
                             modeTags: [{ value: MODE_TAG_VACUUM }],
                         },
                         {
-                            label: 'Turbo',
+                            label: 'Deep Clean',
                             mode: CLEAN_MODE_TURBO,
-                            modeTags: [{ value: MODE_TAG_VACUUM }],
+                            modeTags: [{ value: MODE_TAG_DEEP_CLEAN }],
                         },
                         {
                             label: 'Max',
                             mode: CLEAN_MODE_MAX,
-                            modeTags: [{ value: MODE_TAG_VACUUM }],
+                            modeTags: [{ value: MODE_TAG_MAX }],
                         },
                     ],
                     currentMode: CLEAN_MODE_BALANCED,
