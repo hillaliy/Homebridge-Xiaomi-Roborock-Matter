@@ -104,12 +104,16 @@ function normalizeModel(model: string): string {
   return (trimmed || 'Roborock').slice(0, 32);
 }
 
+function normalizeResetId(resetId: string | undefined): string {
+  return (resetId ?? '').trim();
+}
+
 export class MatterVacuumBridge {
   /** UUID of the registered Matter accessory — stored so we can push updates */
   private uuid: string | null = null;
   private accessory: MatterAccessory | null = null;
   private lastStateSummary: string | null = null;
-  private model = 'Roborock';
+  private model: string;
 
   constructor(
     private readonly config: RoborockDeviceConfig,
@@ -117,7 +121,9 @@ export class MatterVacuumBridge {
     private readonly api: API,
     private readonly log: Logger,
     private readonly cachedAccessories: Map<string, MatterAccessory>,
-  ) {}
+  ) {
+    this.model = normalizeModel(config.model ?? 'Roborock');
+  }
 
   /**
    * Register the device with Homebridge's Matter API.
@@ -127,7 +133,9 @@ export class MatterVacuumBridge {
     const matter = this.api.matter!; // safe: caller has gated on isMatterEnabled()
     const { name, ip } = this.config;
 
-    this.uuid = matter.uuid.generate(`roborock-${ip}`);
+    const resetId = normalizeResetId(this.config.resetId);
+    const uuidSeed = resetId ? `roborock-${ip}-${resetId}` : `roborock-${ip}`;
+    this.uuid = matter.uuid.generate(uuidSeed);
 
     const cachedAccessory = this.cachedAccessories.get(this.uuid);
     if (cachedAccessory) {
@@ -152,6 +160,7 @@ export class MatterVacuumBridge {
         ip,
         name,
         model: this.model,
+        resetId,
       },
 
       // ── Initial cluster state ──────────────────────────────────────────────
@@ -281,8 +290,8 @@ export class MatterVacuumBridge {
     };
 
     this.accessory = accessory;
-    this.log.debug(
-      `[Matter] Registering "${name}" with Homebridge Matter API as RoboticVacuumCleaner`,
+    this.log.info(
+      `[Matter] Registering "${name}" as RoboticVacuumCleaner: manufacturer=${accessory.manufacturer}, model=${accessory.model}, firmware=${accessory.firmwareRevision}, serial=${accessory.serialNumber}, uuid=${accessory.UUID}`,
     );
     await matter.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [
       accessory,

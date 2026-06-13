@@ -37,6 +37,18 @@
               "maxLength": 32,
               "placeholder": "32-character hex token"
             },
+            "model": {
+              "title": "Model Override",
+              "type": "string",
+              "placeholder": "rockrobo.vacuum.v1",
+              "description": "Optional. Used as the Matter model before registration. Leave empty to detect from miio."
+            },
+            "resetId": {
+              "title": "Matter Reset ID",
+              "type": "string",
+              "placeholder": "v2",
+              "description": "Optional. Change this value to force a new Matter accessory identity when HomeKit keeps stale metadata."
+            },
             "pollInterval": {
               "title": "Poll Interval (ms)",
               "type": "integer",
@@ -56,6 +68,8 @@
         "devices[].name",
         "devices[].ip",
         "devices[].token",
+        "devices[].model",
+        "devices[].resetId",
         "devices[].pollInterval"
       ]
     }

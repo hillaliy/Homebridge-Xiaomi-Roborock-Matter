@@ -93,6 +93,9 @@ function normalizeModel(model) {
     const trimmed = model.trim();
     return (trimmed || 'Roborock').slice(0, 32);
 }
+function normalizeResetId(resetId) {
+    return (resetId ?? '').trim();
+}
 class MatterVacuumBridge {
     constructor(config, client, api, log, cachedAccessories) {
         this.config = config;
@@ -104,7 +107,7 @@ class MatterVacuumBridge {
         this.uuid = null;
         this.accessory = null;
         this.lastStateSummary = null;
-        this.model = 'Roborock';
+        this.model = normalizeModel(config.model ?? 'Roborock');
     }
     /**
      * Register the device with Homebridge's Matter API.
@@ -113,7 +116,9 @@ class MatterVacuumBridge {
     async start() {
         const matter = this.api.matter; // safe: caller has gated on isMatterEnabled()
         const { name, ip } = this.config;
-        this.uuid = matter.uuid.generate(`roborock-${ip}`);
+        const resetId = normalizeResetId(this.config.resetId);
+        const uuidSeed = resetId ? `roborock-${ip}-${resetId}` : `roborock-${ip}`;
+        this.uuid = matter.uuid.generate(uuidSeed);
         const cachedAccessory = this.cachedAccessories.get(this.uuid);
         if (cachedAccessory) {
             this.log.info(`[Matter] Reusing cached accessory for "${name}" (${this.uuid})`);
@@ -135,6 +140,7 @@ class MatterVacuumBridge {
                 ip,
                 name,
                 model: this.model,
+                resetId,
             },
             // ── Initial cluster state ──────────────────────────────────────────────
             // Homebridge persists and restores this after first creation.
@@ -261,7 +267,7 @@ class MatterVacuumBridge {
             },
         };
         this.accessory = accessory;
-        this.log.debug(`[Matter] Registering "${name}" with Homebridge Matter API as RoboticVacuumCleaner`);
+        this.log.info(`[Matter] Registering "${name}" as RoboticVacuumCleaner: manufacturer=${accessory.manufacturer}, model=${accessory.model}, firmware=${accessory.firmwareRevision}, serial=${accessory.serialNumber}, uuid=${accessory.UUID}`);
         await matter.registerPlatformAccessories(settings_1.PLUGIN_NAME, settings_1.PLATFORM_NAME, [
             accessory,
         ]);
