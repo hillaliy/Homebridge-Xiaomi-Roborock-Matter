@@ -32,6 +32,40 @@ const MODE_TAG_QUIET = 0x0002;
 const MODE_TAG_MAX = 0x0007;
 const MODE_TAG_DEEP_CLEAN = 0x4000;
 const MODE_TAG_VACUUM = 0x4001;
+const SUPPORTED_RUN_MODES = [
+    {
+        label: 'Idle',
+        mode: RUN_MODE_IDLE,
+        modeTags: [{ value: 0x4000 }], // ModeTag.Idle
+    },
+    {
+        label: 'Cleaning',
+        mode: RUN_MODE_CLEANING,
+        modeTags: [{ value: 0x4001 }], // ModeTag.Cleaning
+    },
+];
+const SUPPORTED_CLEAN_MODES = [
+    {
+        label: 'Quiet',
+        mode: CLEAN_MODE_QUIET,
+        modeTags: [{ value: MODE_TAG_QUIET }],
+    },
+    {
+        label: 'Vacuum',
+        mode: CLEAN_MODE_BALANCED,
+        modeTags: [{ value: MODE_TAG_VACUUM }],
+    },
+    {
+        label: 'Deep Clean',
+        mode: CLEAN_MODE_TURBO,
+        modeTags: [{ value: MODE_TAG_DEEP_CLEAN }],
+    },
+    {
+        label: 'Max',
+        mode: CLEAN_MODE_MAX,
+        modeTags: [{ value: MODE_TAG_MAX }],
+    },
+];
 // ── RvcOperationalState values (from Matter spec / matter.js) ────────────────
 // These numeric values are stable across matter.js versions.
 const OP_STATE_STOPPED = 0x00;
@@ -96,6 +130,12 @@ function normalizeModel(model) {
 function normalizeResetId(resetId) {
     return (resetId ?? '').trim();
 }
+function cloneModes(modes) {
+    return modes.map((mode) => ({
+        ...mode,
+        modeTags: [...mode.modeTags ?? []],
+    }));
+}
 class MatterVacuumBridge {
     constructor(config, client, api, log, cachedAccessories) {
         this.config = config;
@@ -146,43 +186,11 @@ class MatterVacuumBridge {
             // Homebridge persists and restores this after first creation.
             clusters: {
                 rvcRunMode: {
-                    supportedModes: [
-                        {
-                            label: 'Idle',
-                            mode: RUN_MODE_IDLE,
-                            modeTags: [{ value: 0x4000 }], // ModeTag.Idle
-                        },
-                        {
-                            label: 'Cleaning',
-                            mode: RUN_MODE_CLEANING,
-                            modeTags: [{ value: 0x4001 }], // ModeTag.Cleaning
-                        },
-                    ],
+                    supportedModes: cloneModes(SUPPORTED_RUN_MODES),
                     currentMode: RUN_MODE_IDLE,
                 },
                 rvcCleanMode: {
-                    supportedModes: [
-                        {
-                            label: 'Quiet',
-                            mode: CLEAN_MODE_QUIET,
-                            modeTags: [{ value: MODE_TAG_QUIET }],
-                        },
-                        {
-                            label: 'Vacuum',
-                            mode: CLEAN_MODE_BALANCED,
-                            modeTags: [{ value: MODE_TAG_VACUUM }],
-                        },
-                        {
-                            label: 'Deep Clean',
-                            mode: CLEAN_MODE_TURBO,
-                            modeTags: [{ value: MODE_TAG_DEEP_CLEAN }],
-                        },
-                        {
-                            label: 'Max',
-                            mode: CLEAN_MODE_MAX,
-                            modeTags: [{ value: MODE_TAG_MAX }],
-                        },
-                    ],
+                    supportedModes: cloneModes(SUPPORTED_CLEAN_MODES),
                     currentMode: CLEAN_MODE_BALANCED,
                 },
                 rvcOperationalState: {
@@ -271,7 +279,46 @@ class MatterVacuumBridge {
         await matter.registerPlatformAccessories(settings_1.PLUGIN_NAME, settings_1.PLATFORM_NAME, [
             accessory,
         ]);
+        await this.refreshMatterMetadata();
         this.log.info(`[Matter] "${name}" registration request accepted by Homebridge Matter API.`);
+    }
+    async refreshMatterMetadata() {
+        if (!this.uuid || !this.accessory) {
+            return;
+        }
+        const matter = this.api.matter;
+        this.accessory.manufacturer = 'Xiaomi';
+        this.accessory.model = this.model;
+        this.accessory.firmwareRevision = settings_1.PLUGIN_VERSION;
+        this.accessory.context = {
+            ...this.accessory.context,
+            model: this.model,
+            firmwareRevision: settings_1.PLUGIN_VERSION,
+        };
+        this.accessory.clusters = {
+            ...this.accessory.clusters,
+            rvcRunMode: {
+                ...this.accessory.clusters?.rvcRunMode,
+                supportedModes: cloneModes(SUPPORTED_RUN_MODES),
+            },
+            rvcCleanMode: {
+                ...this.accessory.clusters?.rvcCleanMode,
+                supportedModes: cloneModes(SUPPORTED_CLEAN_MODES),
+            },
+        };
+        try {
+            await matter.updateAccessoryState(this.uuid, matter.clusterNames.RvcRunMode, {
+                supportedModes: cloneModes(SUPPORTED_RUN_MODES),
+            });
+            await matter.updateAccessoryState(this.uuid, matter.clusterNames.RvcCleanMode, {
+                supportedModes: cloneModes(SUPPORTED_CLEAN_MODES),
+            });
+            await matter.updatePlatformAccessories([this.accessory]);
+            this.log.info(`[Matter] "${this.config.name}" metadata cache refreshed: model=${this.model}, firmware=${settings_1.PLUGIN_VERSION}, cleanModes=${SUPPORTED_CLEAN_MODES.length}`);
+        }
+        catch (err) {
+            this.log.warn(`[Matter] Failed to refresh metadata cache for "${this.config.name}": ${err}`);
+        }
     }
     async updateModel(model) {
         const normalizedModel = normalizeModel(model);
@@ -283,11 +330,14 @@ class MatterVacuumBridge {
             return;
         }
         this.accessory.model = normalizedModel;
+        this.accessory.firmwareRevision = settings_1.PLUGIN_VERSION;
         this.accessory.context = {
             ...this.accessory.context,
             model: normalizedModel,
+            firmwareRevision: settings_1.PLUGIN_VERSION,
         };
         try {
+            await this.refreshMatterMetadata();
             await this.api.matter?.updatePlatformAccessories([this.accessory]);
             this.log.info(`[Matter] "${this.config.name}" model updated from miio: ${normalizedModel}`);
         }
