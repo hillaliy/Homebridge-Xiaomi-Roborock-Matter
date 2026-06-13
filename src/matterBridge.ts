@@ -30,8 +30,8 @@ const CLEAN_MODE_TURBO = 2;
 const CLEAN_MODE_MAX = 3;
 
 // ── Matter RVC mode tags ────────────────────────────────────────────────────
-// Apple Home displays these semantic tags as mode names. The Roborock fan
-// levels therefore appear as Quiet, Vacuum, Deep Clean, and Max.
+// Apple Home uses the semantic tags as the visible mode names. Keep the
+// required Vacuum tag on every mode, then add semantic tags for fan levels.
 const MODE_TAG_QUIET = 0x0002;
 const MODE_TAG_MAX = 0x0007;
 const MODE_TAG_DEEP_CLEAN = 0x4000;
@@ -54,22 +54,25 @@ const SUPPORTED_CLEAN_MODES = [
   {
     label: 'Quiet',
     mode: CLEAN_MODE_QUIET,
-    modeTags: [{ value: MODE_TAG_QUIET }],
+    modeTags: [{ value: MODE_TAG_VACUUM }, { value: MODE_TAG_QUIET }],
   },
   {
-    label: 'Vacuum',
+    label: 'Balanced',
     mode: CLEAN_MODE_BALANCED,
     modeTags: [{ value: MODE_TAG_VACUUM }],
   },
   {
-    label: 'Deep Clean',
+    label: 'Turbo',
     mode: CLEAN_MODE_TURBO,
-    modeTags: [{ value: MODE_TAG_DEEP_CLEAN }],
+    modeTags: [
+      { value: MODE_TAG_VACUUM },
+      { value: MODE_TAG_DEEP_CLEAN },
+    ],
   },
   {
     label: 'Max',
     mode: CLEAN_MODE_MAX,
-    modeTags: [{ value: MODE_TAG_MAX }],
+    modeTags: [{ value: MODE_TAG_VACUUM }, { value: MODE_TAG_MAX }],
   },
 ];
 
@@ -140,10 +143,6 @@ function normalizeModel(model: string): string {
   return (trimmed || 'Roborock').slice(0, 32);
 }
 
-function normalizeResetId(resetId: string | undefined): string {
-  return (resetId ?? '').trim();
-}
-
 function cloneModes<T>(modes: T[]): T[] {
   return modes.map((mode) => ({
     ...mode,
@@ -165,7 +164,7 @@ export class MatterVacuumBridge {
     private readonly log: Logger,
     private readonly cachedAccessories: Map<string, MatterAccessory>,
   ) {
-    this.model = normalizeModel(config.model ?? 'Roborock');
+    this.model = 'Roborock';
   }
 
   /**
@@ -176,9 +175,7 @@ export class MatterVacuumBridge {
     const matter = this.api.matter!; // safe: caller has gated on isMatterEnabled()
     const { name, ip } = this.config;
 
-    const resetId = normalizeResetId(this.config.resetId);
-    const uuidSeed = resetId ? `roborock-${ip}-${resetId}` : `roborock-${ip}`;
-    this.uuid = matter.uuid.generate(uuidSeed);
+    this.uuid = matter.uuid.generate(`roborock-${ip}`);
 
     const cachedAccessory = this.cachedAccessories.get(this.uuid);
     if (cachedAccessory) {
@@ -203,7 +200,6 @@ export class MatterVacuumBridge {
         ip,
         name,
         model: this.model,
-        resetId,
       },
 
       // ── Initial cluster state ──────────────────────────────────────────────
@@ -307,55 +303,9 @@ export class MatterVacuumBridge {
     await matter.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [
       accessory,
     ]);
-    await this.refreshMatterMetadata();
     this.log.info(
       `[Matter] "${name}" registration request accepted by Homebridge Matter API.`,
     );
-  }
-
-  private async refreshMatterMetadata(): Promise<void> {
-    if (!this.uuid || !this.accessory) {
-      return;
-    }
-
-    const matter = this.api.matter!;
-    this.accessory.manufacturer = 'Xiaomi';
-    this.accessory.model = this.model;
-    this.accessory.firmwareRevision = PLUGIN_VERSION;
-    this.accessory.context = {
-      ...this.accessory.context,
-      model: this.model,
-      firmwareRevision: PLUGIN_VERSION,
-    };
-
-    this.accessory.clusters = {
-      ...this.accessory.clusters,
-      rvcRunMode: {
-        ...this.accessory.clusters?.rvcRunMode,
-        supportedModes: cloneModes(SUPPORTED_RUN_MODES),
-      },
-      rvcCleanMode: {
-        ...this.accessory.clusters?.rvcCleanMode,
-        supportedModes: cloneModes(SUPPORTED_CLEAN_MODES),
-      },
-    };
-
-    try {
-      await matter.updateAccessoryState(this.uuid, matter.clusterNames.RvcRunMode, {
-        supportedModes: cloneModes(SUPPORTED_RUN_MODES),
-      });
-      await matter.updateAccessoryState(this.uuid, matter.clusterNames.RvcCleanMode, {
-        supportedModes: cloneModes(SUPPORTED_CLEAN_MODES),
-      });
-      await matter.updatePlatformAccessories([this.accessory]);
-      this.log.info(
-        `[Matter] "${this.config.name}" metadata cache refreshed: model=${this.model}, firmware=${PLUGIN_VERSION}, cleanModes=${SUPPORTED_CLEAN_MODES.length}`,
-      );
-    } catch (err) {
-      this.log.warn(
-        `[Matter] Failed to refresh metadata cache for "${this.config.name}": ${err}`,
-      );
-    }
   }
 
   async updateModel(model: string): Promise<void> {
@@ -379,7 +329,6 @@ export class MatterVacuumBridge {
     };
 
     try {
-      await this.refreshMatterMetadata();
       await this.api.matter?.updatePlatformAccessories([this.accessory]);
       this.log.info(
         `[Matter] "${this.config.name}" model updated from miio: ${normalizedModel}`,
@@ -396,42 +345,39 @@ export class MatterVacuumBridge {
    * Call this from your poll loop whenever the Roborock state changes.
    */
   async updateState(state: RoborockState): Promise<void> {
-    if (!this.uuid) return; // not registered yet
+    if (!this.uuid || !this.accessory) return; // not registered yet
 
-    const matter = this.api.matter!;
     const stateSummary = `status=${state.status}, battery=${state.batteryLevel}%, fan=${state.fanSpeed}%, error=${state.errorCode}, cleanTime=${state.cleanTime}s, cleanArea=${state.cleanArea}`;
 
-    try {
-      await Promise.all([
-        matter.updateAccessoryState(this.uuid, matter.clusterNames.RvcRunMode, {
-          currentMode:
-            state.status === 'cleaning' ? RUN_MODE_CLEANING : RUN_MODE_IDLE,
-        }),
-        matter.updateAccessoryState(this.uuid, matter.clusterNames.RvcCleanMode, {
-          currentMode: fanSpeedToCleanMode(state.fanSpeed),
-        }),
-        matter.updateAccessoryState(
-          this.uuid,
-          matter.clusterNames.RvcOperationalState,
-          {
-            operationalState: STATUS_TO_OP_STATE[state.status],
-            operationalError: roborockErrorToMatterError(state.errorCode),
-          },
+    this.accessory.clusters = {
+      ...this.accessory.clusters,
+      rvcRunMode: {
+        ...this.accessory.clusters?.rvcRunMode,
+        supportedModes: cloneModes(SUPPORTED_RUN_MODES),
+        currentMode:
+          state.status === 'cleaning' ? RUN_MODE_CLEANING : RUN_MODE_IDLE,
+      },
+      rvcCleanMode: {
+        ...this.accessory.clusters?.rvcCleanMode,
+        supportedModes: cloneModes(SUPPORTED_CLEAN_MODES),
+        currentMode: fanSpeedToCleanMode(state.fanSpeed),
+      },
+      rvcOperationalState: {
+        ...this.accessory.clusters?.rvcOperationalState,
+        operationalState: STATUS_TO_OP_STATE[state.status],
+        operationalError: roborockErrorToMatterError(state.errorCode),
+      },
+      powerSource: {
+        ...this.accessory.clusters?.powerSource,
+        batPercentRemaining: Math.max(
+          0,
+          Math.min(200, state.batteryLevel * 2),
         ),
-        matter.updateAccessoryState(this.uuid, matter.clusterNames.PowerSource, {
-          batPercentRemaining: Math.max(
-            0,
-            Math.min(200, state.batteryLevel * 2),
-          ),
-          batChargeState: state.status === 'docked' ? 1 : 2, // 1=Charging, 2=NotCharging
-        }),
-      ]);
-    } catch (err) {
-      this.log.warn(
-        `[Matter] Failed to update state for "${this.config.name}": ${err}`,
-      );
-      throw err;
-    }
+        batChargeState: state.status === 'docked' ? 1 : 2, // 1=Charging, 2=NotCharging
+      },
+    };
+
+    await this.api.matter?.updatePlatformAccessories([this.accessory]);
 
     if (stateSummary !== this.lastStateSummary) {
       this.log.info(`[Matter] "${this.config.name}" state updated: ${stateSummary}`);

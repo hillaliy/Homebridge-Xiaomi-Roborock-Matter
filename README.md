@@ -68,7 +68,6 @@ You can configure the plugin from the Homebridge UI, or add a platform entry man
       "name": "Living Room Vacuum",
       "ip": "192.168.1.100",
       "token": "0123456789abcdef0123456789abcdef",
-      "model": "rockrobo.vacuum.v1",
       "pollInterval": 10000
     }
   ]
@@ -80,8 +79,6 @@ You can configure the plugin from the Homebridge UI, or add a platform entry man
 | `name` | Yes | Name shown in Matter controllers. |
 | `ip` | Yes | Vacuum LAN IP address. Use a static DHCP lease. |
 | `token` | Yes | 32-character hexadecimal miio token. |
-| `model` | No | Optional model override used before Matter registration, for example `rockrobo.vacuum.v1`. Leave empty to detect from miio. |
-| `resetId` | No | Optional Matter identity suffix. Leave empty for normal updates. Change only if a Matter controller keeps stale metadata after Homebridge shows the correct values. |
 | `pollInterval` | No | State refresh interval in milliseconds. Defaults to `10000`. |
 
 ## <img src="https://api.iconify.design/lucide:house-plug.svg" width="18" alt=""> Matter Setup
@@ -93,8 +90,6 @@ If the vacuum does not appear:
 - Confirm Homebridge Matter is enabled.
 - Confirm the Homebridge Matter bridge or accessory is commissioned in your Matter controller.
 - Check the Homebridge logs for Matter registration errors.
-
-The plugin refreshes Homebridge's Matter accessory cache on startup, so normal plugin updates do not require removing and re-adding the vacuum. If Homebridge shows the correct metadata but a Matter controller still keeps old values, set `resetId` to a new value such as `v2`, restart Homebridge, then pair the new Matter accessory code as a last resort.
 
 ## <img src="https://api.iconify.design/lucide:sliders-horizontal.svg" width="18" alt=""> Supported Controls
 

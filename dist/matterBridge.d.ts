@@ -33,7 +33,6 @@ export declare class MatterVacuumBridge {
      * Call this after api.matter is confirmed available.
      */
     start(): Promise<void>;
-    private refreshMatterMetadata;
     updateModel(model: string): Promise<void>;
     /**
      * Push the latest device state into the Matter clusters.
