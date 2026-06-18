@@ -18,6 +18,11 @@ export interface RoborockState {
   cleanTime: number; // seconds
 }
 
+export interface RoborockRoom {
+  name: string;
+  segmentId: number;
+}
+
 /** Maps Roborock status codes to our simplified status enum */
 const STATUS_MAP: Record<number, RoborockStatus> = {
   1: 'idle', // Initiating
@@ -149,6 +154,54 @@ export class RoborockClient {
     this.log.debug(
       `[Roborock ${this.ip}] Fan speed → ${speedPercent}% (code ${code})`,
     );
+  }
+
+  async cleanSegments(segmentIds: number[]): Promise<void> {
+    this.assertConnected();
+    await this.device.call('app_segment_clean', [segmentIds]);
+    this.log.info(
+      `[Roborock ${this.ip}] Clean room segment(s): ${segmentIds.join(', ')}`,
+    );
+  }
+
+  async getRoomMapping(): Promise<RoborockRoom[]> {
+    this.assertConnected();
+    this.log.debug(`[Roborock ${this.ip}] Reading room mapping`);
+    const result = await this.device.call('get_room_mapping', []);
+    this.log.debug(
+      `[Roborock ${this.ip}] Raw room mapping: ${JSON.stringify(result)}`,
+    );
+    const entries = Array.isArray(result) ? result : [];
+    const rooms: RoborockRoom[] = [];
+    const seen = new Set<number>();
+
+    for (const entry of entries) {
+      const segmentId = Array.isArray(entry)
+        ? Number(entry[0])
+        : Number(entry?.segment_id ?? entry?.segmentId ?? entry?.id);
+      const rawName = Array.isArray(entry)
+        ? entry[1]
+        : entry?.name ?? entry?.room_name ?? entry?.roomName;
+
+      if (!Number.isInteger(segmentId) || segmentId <= 0 || seen.has(segmentId)) {
+        continue;
+      }
+
+      seen.add(segmentId);
+      rooms.push({
+        segmentId,
+        name: typeof rawName === 'string' && rawName.trim()
+          ? rawName.trim()
+          : `Room ${segmentId}`,
+      });
+    }
+
+    this.log.info(
+      rooms.length
+        ? `[Roborock ${this.ip}] Discovered ${rooms.length} room(s): ${rooms.map((room) => `${room.name}=${room.segmentId}`).join(', ')}`
+        : `[Roborock ${this.ip}] Room mapping is empty`,
+    );
+    return rooms;
   }
 
   async findRobot(): Promise<void> {

@@ -42,6 +42,30 @@
               "type": "integer",
               "minimum": 2000,
               "default": 10000
+            },
+            "rooms": {
+              "title": "Rooms",
+              "description": "Optional room name overrides or fallback mappings. The plugin automatically discovers rooms from the vacuum over LAN.",
+              "type": "array",
+              "items": {
+                "title": "Room",
+                "type": "object",
+                "required": ["name", "segmentId"],
+                "additionalProperties": false,
+                "properties": {
+                  "name": {
+                    "title": "Room Name",
+                    "type": "string",
+                    "placeholder": "Kitchen"
+                  },
+                  "segmentId": {
+                    "title": "Segment ID",
+                    "type": "integer",
+                    "minimum": 1,
+                    "placeholder": 16
+                  }
+                }
+              }
             }
           }
         }
@@ -56,7 +80,15 @@
         "devices[].name",
         "devices[].ip",
         "devices[].token",
-        "devices[].pollInterval"
+        "devices[].pollInterval",
+        {
+          "key": "devices[].rooms",
+          "type": "array",
+          "items": [
+            "devices[].rooms[].name",
+            "devices[].rooms[].segmentId"
+          ]
+        }
       ]
     }
   ]

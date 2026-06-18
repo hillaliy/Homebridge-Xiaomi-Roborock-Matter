@@ -26,6 +26,9 @@ export declare class MatterVacuumBridge {
     private uuid;
     private accessory;
     private lastStateSummary;
+    private lastState;
+    private endpointNotReadyLogged;
+    private liveUpdateErrorLogged;
     private model;
     constructor(config: RoborockDeviceConfig, client: RoborockClient, api: API, log: Logger, cachedAccessories: Map<string, MatterAccessory>);
     /**
@@ -39,6 +42,12 @@ export declare class MatterVacuumBridge {
      * Call this from your poll loop whenever the Roborock state changes.
      */
     updateState(state: RoborockState): Promise<void>;
+    private getExternalMatterServer;
+    private pushLiveState;
+    private applyOptimisticState;
+    private getValidRoomSegmentIds;
+    private applySelectedRooms;
+    private getFirstSelectedRoomSegmentId;
     /**
      * Stop runtime work owned by this bridge.
      *

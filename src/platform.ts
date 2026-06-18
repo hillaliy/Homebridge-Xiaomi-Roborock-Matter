@@ -10,7 +10,7 @@ import {
 } from 'homebridge';
 
 import { MatterVacuumBridge } from './matterBridge';
-import { RoborockClient } from './roborockClient';
+import { RoborockClient, RoborockRoom } from './roborockClient';
 import { RoborockDeviceConfig, RoborockPlatformConfig } from './settings';
 
 interface ActiveDevice {
@@ -137,6 +137,7 @@ export class RoborockMatterPlatform implements DynamicPlatformPlugin {
     try {
       await client.connect();
       await bridge.updateModel(client.getModel());
+      await this.discoverRooms(deviceConfig, client);
       this.log.info(
         `Detected "${name}" miio model before Matter registration: ${client.getModel()}`,
       );
@@ -180,6 +181,65 @@ export class RoborockMatterPlatform implements DynamicPlatformPlugin {
         `Could not connect to "${name}" or fetch initial state yet: ${err}. Will retry every ${pollInterval} ms.`,
       );
     }
+  }
+
+  private async discoverRooms(
+    deviceConfig: RoborockDeviceConfig,
+    client: RoborockClient,
+  ): Promise<void> {
+    const configuredRooms = deviceConfig.rooms ?? [];
+
+    try {
+      const discoveredRooms = await client.getRoomMapping();
+      if (!discoveredRooms.length) {
+        if (configuredRooms.length) {
+          this.log.info(
+            `Using ${configuredRooms.length} manually configured room(s) for "${deviceConfig.name}"`,
+          );
+        }
+        return;
+      }
+
+      deviceConfig.rooms = this.mergeRooms(discoveredRooms, configuredRooms);
+      this.log.info(
+        `Using ${deviceConfig.rooms.length} LAN-discovered room(s) for "${deviceConfig.name}"`,
+      );
+    } catch (err) {
+      const fallback = configuredRooms.length
+        ? ` Using ${configuredRooms.length} manually configured room(s).`
+        : ' Room selection will be unavailable.';
+      this.log.warn(
+        `Could not discover rooms for "${deviceConfig.name}" over LAN: ${err}.${fallback}`,
+      );
+    }
+  }
+
+  private mergeRooms(
+    discoveredRooms: RoborockRoom[],
+    configuredRooms: RoborockDeviceConfig['rooms'],
+  ): RoborockRoom[] {
+    const configuredNames = new Map(
+      (configuredRooms ?? [])
+        .filter((room) => Number.isInteger(room.segmentId) && room.name?.trim())
+        .map((room) => [room.segmentId, room.name.trim()]),
+    );
+    const merged = discoveredRooms.map((room) => ({
+      ...room,
+      name: configuredNames.get(room.segmentId) || room.name,
+    }));
+    const discoveredIds = new Set(merged.map((room) => room.segmentId));
+
+    for (const room of configuredRooms ?? []) {
+      if (
+        Number.isInteger(room.segmentId)
+        && room.name?.trim()
+        && !discoveredIds.has(room.segmentId)
+      ) {
+        merged.push(room);
+      }
+    }
+
+    return merged;
   }
 
   private createPollTimer(

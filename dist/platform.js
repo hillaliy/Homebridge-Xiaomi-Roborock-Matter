@@ -72,6 +72,7 @@ class RoborockMatterPlatform {
         try {
             await client.connect();
             await bridge.updateModel(client.getModel());
+            await this.discoverRooms(deviceConfig, client);
             this.log.info(`Detected "${name}" miio model before Matter registration: ${client.getModel()}`);
         }
         catch (err) {
@@ -107,6 +108,44 @@ class RoborockMatterPlatform {
         catch (err) {
             this.log.warn(`Could not connect to "${name}" or fetch initial state yet: ${err}. Will retry every ${pollInterval} ms.`);
         }
+    }
+    async discoverRooms(deviceConfig, client) {
+        const configuredRooms = deviceConfig.rooms ?? [];
+        try {
+            const discoveredRooms = await client.getRoomMapping();
+            if (!discoveredRooms.length) {
+                if (configuredRooms.length) {
+                    this.log.info(`Using ${configuredRooms.length} manually configured room(s) for "${deviceConfig.name}"`);
+                }
+                return;
+            }
+            deviceConfig.rooms = this.mergeRooms(discoveredRooms, configuredRooms);
+            this.log.info(`Using ${deviceConfig.rooms.length} LAN-discovered room(s) for "${deviceConfig.name}"`);
+        }
+        catch (err) {
+            const fallback = configuredRooms.length
+                ? ` Using ${configuredRooms.length} manually configured room(s).`
+                : ' Room selection will be unavailable.';
+            this.log.warn(`Could not discover rooms for "${deviceConfig.name}" over LAN: ${err}.${fallback}`);
+        }
+    }
+    mergeRooms(discoveredRooms, configuredRooms) {
+        const configuredNames = new Map((configuredRooms ?? [])
+            .filter((room) => Number.isInteger(room.segmentId) && room.name?.trim())
+            .map((room) => [room.segmentId, room.name.trim()]));
+        const merged = discoveredRooms.map((room) => ({
+            ...room,
+            name: configuredNames.get(room.segmentId) || room.name,
+        }));
+        const discoveredIds = new Set(merged.map((room) => room.segmentId));
+        for (const room of configuredRooms ?? []) {
+            if (Number.isInteger(room.segmentId)
+                && room.name?.trim()
+                && !discoveredIds.has(room.segmentId)) {
+                merged.push(room);
+            }
+        }
+        return merged;
     }
     createPollTimer(name, client, bridge, pollInterval) {
         return setInterval(async () => {

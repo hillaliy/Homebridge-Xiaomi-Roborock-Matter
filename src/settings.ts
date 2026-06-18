@@ -1,6 +1,14 @@
 export const PLUGIN_NAME = 'homebridge-xiaomi-roborock-matter';
 export const PLATFORM_NAME = 'XiaomiRoborockMatter';
-export const PLUGIN_VERSION = '1.0.6';
+export const PLUGIN_VERSION = '1.0.7';
+
+/** Optional room mapping for Matter ServiceArea. */
+export interface RoborockRoomConfig {
+  /** Room name shown by Matter controllers */
+  name: string;
+  /** Roborock map segment ID */
+  segmentId: number;
+}
 
 /** Shape of a single device in config.json */
 export interface RoborockDeviceConfig {
@@ -22,6 +30,8 @@ export interface RoborockDeviceConfig {
   passcode?: number;
   /** Poll interval in milliseconds. Default: 10000 */
   pollInterval?: number;
+  /** Optional room name overrides/fallbacks; rooms are discovered over LAN */
+  rooms?: RoborockRoomConfig[];
 }
 
 /** Shape of the platform config block in config.json */

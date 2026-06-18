@@ -31,6 +31,7 @@ This plugin is designed to keep runtime control local. Xiaomi Cloud is not used 
 - Local Roborock control over miio
 - Start, pause, resume, and return-to-dock commands
 - Quiet, Vacuum, Deep Clean, and Max clean modes
+- Automatic LAN room discovery and Matter room selection
 - Battery and operational-state updates
 - miio model metadata when the vacuum reports it
 - Homebridge UI configuration schema
@@ -41,6 +42,38 @@ This plugin is designed to keep runtime control local. Xiaomi Cloud is not used 
 - Node.js 22 or newer
 - Static LAN IP address for each Roborock
 - 32-character miio token for each Roborock
+
+## <img src="https://api.iconify.design/lucide:wifi.svg" width="18" alt=""> Local Network Control
+
+This plugin communicates directly with the vacuum on your local network using the Xiaomi miio protocol. Starting, pausing, docking, status polling, fan-mode changes, and room discovery do not use the Xiaomi or Roborock cloud.
+
+Homebridge and the vacuum must be able to reach each other on the same LAN. Assign the vacuum a static DHCP lease because both its IP address and miio token are used for the connection.
+
+## <img src="https://api.iconify.design/lucide:key-round.svg" width="18" alt=""> Extracting the miio Token
+
+The token is a 32-character hexadecimal value, for example `0123456789abcdef0123456789abcdef`. It is different from your Xiaomi account password.
+
+### Xiaomi Cloud Tokens Extractor
+
+1. Download and run the [Xiaomi Cloud Tokens Extractor](https://github.com/PiotrMachowski/Xiaomi-cloud-tokens-extractor).
+2. Sign in with the Xiaomi account and region used by the Mi Home app.
+3. Find the vacuum in the returned device list.
+4. Copy its IP address and 32-character token into the Homebridge plugin settings.
+
+### python-miio
+
+Install [python-miio](https://github.com/rytilahti/python-miio), then start its interactive Xiaomi Cloud device lookup:
+
+```bash
+pipx install python-miio
+miiocli cloud
+```
+
+Select the correct Xiaomi region and copy the token shown for the vacuum. The [Home Assistant Xiaomi Miio documentation](https://www.home-assistant.io/integrations/xiaomi_miio/#retrieving-the-access-token) also describes token retrieval methods.
+
+Cloud access is needed only by these external extraction tools. Do not add your Xiaomi username or password to this plugin. The plugin stores only the IP address and token in the Homebridge configuration, never prints the token, and uses local miio communication during normal operation.
+
+Some devices paired exclusively through the Roborock app may not expose a compatible Xiaomi miio token. This plugin requires a model and firmware that accept local miio commands.
 
 ## <img src="https://api.iconify.design/lucide:package-plus.svg" width="18" alt=""> Installation
 
@@ -80,6 +113,11 @@ You can configure the plugin from the Homebridge UI, or add a platform entry man
 | `ip` | Yes | Vacuum LAN IP address. Use a static DHCP lease. |
 | `token` | Yes | 32-character hexadecimal miio token. |
 | `pollInterval` | No | State refresh interval in milliseconds. Defaults to `10000`. |
+| `rooms` | No | Optional room name overrides or fallback mappings. Rooms are discovered over LAN. |
+| `rooms[].name` | Yes, when using rooms | Room name shown in Matter controllers. |
+| `rooms[].segmentId` | Yes, when using rooms | Roborock room segment ID from the active map. |
+
+Room support uses `get_room_mapping` and `app_segment_clean` over the LAN. On startup, the plugin discovers segment IDs and room names before registering the Matter accessory. You can omit `rooms` entirely. Manual entries override a discovered room name with the same segment ID and act as a fallback when discovery is unavailable.
 
 ## <img src="https://api.iconify.design/lucide:house-plug.svg" width="18" alt=""> Matter Setup
 
@@ -100,6 +138,7 @@ If the vacuum does not appear:
 | Resume | `app_start` |
 | Return to dock | `app_charge` |
 | Quiet / Vacuum / Deep Clean / Max | `set_custom_mode` |
+| Room selection | `app_segment_clean` |
 
 Mop-specific controls are not exposed yet. Mop-capable Roborock models usually require additional model-specific miio commands, so this plugin currently presents the device as a vacuum cleaner.
 

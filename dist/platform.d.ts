@@ -12,6 +12,8 @@ export declare class RoborockMatterPlatform implements DynamicPlatformPlugin {
     configureMatterAccessory(accessory: MatterAccessory): void;
     private discoverDevices;
     private startDevice;
+    private discoverRooms;
+    private mergeRooms;
     private createPollTimer;
     private teardown;
 }

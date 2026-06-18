@@ -8,6 +8,10 @@ export interface RoborockState {
     cleanArea: number;
     cleanTime: number;
 }
+export interface RoborockRoom {
+    name: string;
+    segmentId: number;
+}
 export declare class RoborockClient {
     private readonly ip;
     private readonly token;
@@ -23,6 +27,8 @@ export declare class RoborockClient {
     pauseCleaning(): Promise<void>;
     returnToDock(): Promise<void>;
     setFanSpeed(speedPercent: number): Promise<void>;
+    cleanSegments(segmentIds: number[]): Promise<void>;
+    getRoomMapping(): Promise<RoborockRoom[]>;
     findRobot(): Promise<void>;
     private assertConnected;
     destroy(): void;

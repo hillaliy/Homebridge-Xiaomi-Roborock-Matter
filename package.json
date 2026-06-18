@@ -1,6 +1,6 @@
 {
   "name": "homebridge-xiaomi-roborock-matter",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Homebridge plugin exposing Xiaomi Roborock vacuums as Matter RoboticVacuumCleaner devices",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
