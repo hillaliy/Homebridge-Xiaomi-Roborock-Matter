@@ -7,8 +7,19 @@
   "files": [
     "dist",
     "config.schema.json",
+    "CHANGELOG.md",
     "README.md"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hillaliy/Homebridge-Xiaomi-Roborock-Matter.git"
+  },
+  "homepage": "https://github.com/hillaliy/Homebridge-Xiaomi-Roborock-Matter#readme",
+  "bugs": {
+    "url": "https://github.com/hillaliy/Homebridge-Xiaomi-Roborock-Matter/issues"
+  },
+  "funding": "https://www.paypal.me/hillaliy",
+  "license": "MIT",
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
