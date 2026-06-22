@@ -113,14 +113,21 @@ const CLEAN_MODE_TO_SPEED: Record<number, number> = {
 };
 
 // ── Roborock status → Matter operational state ───────────────────────────────
-const STATUS_TO_OP_STATE: Record<RoborockState['status'], number> = {
+const STATUS_TO_OP_STATE: Record<Exclude<RoborockState['status'], 'docked'>, number> = {
   cleaning: OP_STATE_RUNNING,
   returning: OP_STATE_SEEKING_CHARGER,
-  docked: OP_STATE_DOCKED,
   paused: OP_STATE_PAUSED,
   idle: OP_STATE_STOPPED,
   error: OP_STATE_ERROR,
 };
+
+function operationalStateFor(state: RoborockState): number {
+  if (state.status === 'docked') {
+    return state.batteryLevel >= 100 ? OP_STATE_DOCKED : OP_STATE_CHARGING;
+  }
+
+  return STATUS_TO_OP_STATE[state.status];
+}
 
 const OPERATIONAL_STATE_LIST = [
   { operationalStateId: OP_STATE_STOPPED },
@@ -551,7 +558,7 @@ export class MatterVacuumBridge {
       },
       rvcOperationalState: {
         ...this.accessory.clusters?.rvcOperationalState,
-        operationalState: STATUS_TO_OP_STATE[state.status],
+        operationalState: operationalStateFor(state),
         operationalError: roborockErrorToMatterError(state.errorCode),
       },
       powerSource: {
@@ -649,7 +656,7 @@ export class MatterVacuumBridge {
       this.uuid,
       matter.clusterNames.RvcOperationalState,
       {
-        operationalState: STATUS_TO_OP_STATE[state.status],
+        operationalState: operationalStateFor(state),
         operationalError: roborockErrorToMatterError(state.errorCode),
       },
     );
@@ -711,7 +718,7 @@ export class MatterVacuumBridge {
       },
       rvcOperationalState: {
         ...this.accessory.clusters?.rvcOperationalState,
-        operationalState: STATUS_TO_OP_STATE[nextState.status],
+        operationalState: operationalStateFor(nextState),
         operationalError: roborockErrorToMatterError(nextState.errorCode),
       },
     };
