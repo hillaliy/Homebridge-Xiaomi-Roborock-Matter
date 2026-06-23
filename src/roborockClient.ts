@@ -47,12 +47,37 @@ const STATUS_MAP: Record<number, RoborockStatus> = {
 
 /** Maps fan speed codes to 0-100 percentage */
 const FAN_SPEED_MAP: Record<number, number> = {
+  38: 25, // Quiet / Silent on older rockrobo models
+  60: 50, // Balanced / Standard on older rockrobo models
+  75: 75, // Turbo / Medium on older rockrobo models
+  100: 100, // Max / Turbo on older rockrobo models
   101: 25, // Quiet
   102: 50, // Balanced
   103: 75, // Turbo
   104: 100, // Max
   105: 50, // Mop mode
 };
+
+const LEGACY_FAN_SPEED_CODES: Record<number, number> = {
+  25: 38,
+  50: 60,
+  75: 75,
+  100: 100,
+};
+
+const MODERN_FAN_SPEED_CODES: Record<number, number> = {
+  25: 101,
+  50: 102,
+  75: 103,
+  100: 104,
+};
+
+function normalizeFanSpeed(speedPercent: number): 25 | 50 | 75 | 100 {
+  if (speedPercent <= 25) return 25;
+  if (speedPercent <= 50) return 50;
+  if (speedPercent <= 75) return 75;
+  return 100;
+}
 
 export class RoborockClient {
   private device: any = null;
@@ -119,7 +144,7 @@ export class RoborockClient {
       cleanTime: s.clean_time ?? 0,
     };
     this.log.debug(
-      `[Roborock ${this.ip}] Parsed state: status=${state.status}, battery=${state.batteryLevel}%, fan=${state.fanSpeed}%, error=${state.errorCode}`,
+      `[Roborock ${this.ip}] Parsed state: status=${state.status}, battery=${state.batteryLevel}%, fan=${state.fanSpeed}% (raw ${s.fan_power ?? 'unknown'}), error=${state.errorCode}`,
     );
     return state;
   }
@@ -144,15 +169,14 @@ export class RoborockClient {
 
   async setFanSpeed(speedPercent: number): Promise<void> {
     this.assertConnected();
-    // Map 0-100% to the closest Roborock speed code
-    let code = 102;
-    if (speedPercent <= 25) code = 101;
-    else if (speedPercent <= 50) code = 102;
-    else if (speedPercent <= 75) code = 103;
-    else code = 104;
+    const normalizedSpeed = normalizeFanSpeed(speedPercent);
+    const codeMap = this.usesLegacyFanSpeedCodes()
+      ? LEGACY_FAN_SPEED_CODES
+      : MODERN_FAN_SPEED_CODES;
+    const code = codeMap[normalizedSpeed];
     await this.device.call('set_custom_mode', [code]);
     this.log.debug(
-      `[Roborock ${this.ip}] Fan speed → ${speedPercent}% (code ${code})`,
+      `[Roborock ${this.ip}] Fan speed → ${normalizedSpeed}% (code ${code})`,
     );
   }
 
@@ -213,6 +237,10 @@ export class RoborockClient {
     if (!this.device) {
       throw new Error(`Not connected to Roborock at ${this.ip}`);
     }
+  }
+
+  private usesLegacyFanSpeedCodes(): boolean {
+    return /^rockrobo\.vacuum\.v1\b/.test(this.getModel());
   }
 
   destroy() {

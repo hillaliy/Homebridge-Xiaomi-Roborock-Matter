@@ -437,7 +437,8 @@ class MatterVacuumBridge {
         if (!this.uuid || !this.accessory)
             return; // not registered yet
         const matter = this.api.matter;
-        const stateSummary = `status=${state.status}, battery=${state.batteryLevel}%, fan=${state.fanSpeed}%, error=${state.errorCode}, cleanTime=${state.cleanTime}s, cleanArea=${state.cleanArea}`;
+        const stateSummary = `status=${state.status}, fan=${state.fanSpeed}%, error=${state.errorCode}`;
+        const stateDetails = `${stateSummary}, battery=${state.batteryLevel}%, cleanTime=${state.cleanTime}s, cleanArea=${state.cleanArea}`;
         this.lastState = state;
         this.accessory.clusters = {
             ...this.accessory.clusters,
@@ -488,7 +489,7 @@ class MatterVacuumBridge {
             }
         });
         if (stateSummary !== this.lastStateSummary) {
-            this.log.info(`[Matter] "${this.config.name}" state updated: ${stateSummary}`);
+            this.log.info(`[Matter] "${this.config.name}" state updated: ${stateDetails}`);
             this.lastStateSummary = stateSummary;
         }
         else {

@@ -31,6 +31,7 @@ export declare class RoborockClient {
     getRoomMapping(): Promise<RoborockRoom[]>;
     findRobot(): Promise<void>;
     private assertConnected;
+    private usesLegacyFanSpeedCodes;
     destroy(): void;
 }
 //# sourceMappingURL=roborockClient.d.ts.map

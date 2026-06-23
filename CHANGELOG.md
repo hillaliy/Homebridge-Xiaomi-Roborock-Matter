@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.9 - 2026-06-23
+
+### Fixed
+
+- Fixed clean-mode control for `rockrobo.vacuum.v1` by using legacy miio fan codes.
+- Recognize both legacy and modern Roborock fan-speed codes when reading status.
+- Reduced normal cleaning log noise by ignoring battery, clean-time, and clean-area changes for `info` state-update logging.
+
 ## 1.0.8 - 2026-06-22
 
 ### Fixed
