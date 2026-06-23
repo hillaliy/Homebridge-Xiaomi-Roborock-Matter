@@ -1,6 +1,6 @@
 export const PLUGIN_NAME = 'homebridge-xiaomi-roborock-matter';
 export const PLATFORM_NAME = 'XiaomiRoborockMatter';
-export const PLUGIN_VERSION = '1.0.10';
+export const PLUGIN_VERSION = '1.0.11';
 
 /** Optional room mapping for Matter ServiceArea. */
 export interface RoborockRoomConfig {
@@ -37,5 +37,6 @@ export interface RoborockDeviceConfig {
 /** Shape of the platform config block in config.json */
 export interface RoborockPlatformConfig {
   platform: typeof PLATFORM_NAME;
+  name?: string;
   devices: RoborockDeviceConfig[];
 }

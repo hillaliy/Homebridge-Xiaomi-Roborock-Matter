@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.11 - 2026-06-23
+
+### Fixed
+
+- Added the required top-level `name` property to the Homebridge config schema.
+- Removed `homebridge` from `peerDependencies` so it remains only in development dependencies.
+
 ## 1.0.10 - 2026-06-23
 
 ### Fixed

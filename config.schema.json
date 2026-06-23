@@ -8,6 +8,11 @@
     "type": "object",
     "required": ["devices"],
     "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "default": "Xiaomi Roborock Matter"
+      },
       "devices": {
         "title": "Roborock Devices",
         "type": "array",
@@ -73,6 +78,9 @@
     }
   },
   "layout": [
+    {
+      "key": "name"
+    },
     {
       "key": "devices",
       "type": "array",
