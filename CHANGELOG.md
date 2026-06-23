@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.10 - 2026-06-23
+
+### Fixed
+
+- Added a distinct Matter `Auto` mode tag to the Balanced clean mode so HomeKit can show the 50% fan mode as a selectable option.
+
 ## 1.0.9 - 2026-06-23
 
 ### Fixed

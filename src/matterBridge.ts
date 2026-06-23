@@ -32,6 +32,7 @@ const CLEAN_MODE_MAX = 3;
 // ── Matter RVC mode tags ────────────────────────────────────────────────────
 // Apple Home uses the semantic tags as the visible mode names. Keep the
 // required Vacuum tag on every mode, then add semantic tags for fan levels.
+const MODE_TAG_AUTO = 0x0000;
 const MODE_TAG_QUIET = 0x0002;
 const MODE_TAG_MAX = 0x0007;
 const MODE_TAG_DEEP_CLEAN = 0x4000;
@@ -59,7 +60,7 @@ const SUPPORTED_CLEAN_MODES = [
   {
     label: 'Balanced',
     mode: CLEAN_MODE_BALANCED,
-    modeTags: [{ value: MODE_TAG_VACUUM }],
+    modeTags: [{ value: MODE_TAG_VACUUM }, { value: MODE_TAG_AUTO }],
   },
   {
     label: 'Turbo',
