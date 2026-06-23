@@ -1,5 +1,7 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/homebridge/branding/master/logos/homebridge-wordmark-logo-vertical.png" width="190" alt="Homebridge">
+  <img src="assets/icon.png" width="150" alt="Homebridge Xiaomi Roborock Matter icon">
+  &nbsp;&nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/homebridge/branding/master/logos/homebridge-wordmark-logo-vertical.png" width="150" alt="Homebridge">
 </p>
 
 <h1 align="center">Homebridge Xiaomi Roborock Matter</h1>
