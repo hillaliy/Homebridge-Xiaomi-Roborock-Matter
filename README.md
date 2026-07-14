@@ -7,6 +7,9 @@
 <h1 align="center">Homebridge Xiaomi Roborock Matter</h1>
 
 <p align="center">
+  <a href="https://github.com/homebridge/homebridge/wiki/Verified-Plugins">
+    <img src="https://img.shields.io/badge/homebridge-verified-blueviolet?color=%23491F59&style=for-the-badge&logoColor=%23FFFFFF&logo=homebridge" alt="Verified by Homebridge">
+  </a>
   <a href="https://www.npmjs.com/package/homebridge-xiaomi-roborock-matter">
     <img src="https://img.shields.io/npm/v/homebridge-xiaomi-roborock-matter?label=npm%20version" alt="npm version">
   </a>
