@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Fixed room cleaning command parameters for Roborock models that expect `app_segment_clean` to receive the segment list directly.
+
 ## 1.0.11 - 2026-06-23
 
 ### Fixed

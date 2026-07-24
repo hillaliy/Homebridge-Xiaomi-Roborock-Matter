@@ -142,7 +142,7 @@ class RoborockClient {
     }
     async cleanSegments(segmentIds) {
         this.assertConnected();
-        await this.device.call('app_segment_clean', [segmentIds]);
+        await this.device.call('app_segment_clean', segmentIds);
         this.log.info(`[Roborock ${this.ip}] Clean room segment(s): ${segmentIds.join(', ')}`);
     }
     async getRoomMapping() {
