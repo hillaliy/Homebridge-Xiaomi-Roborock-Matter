@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.13 - 2026-08-26
+
+### Changed
+
+- Updated development dependencies to the latest versions.
+- Updated the generated distribution files with the latest TypeScript output.
+
 ## 1.0.12 - 2026-07-24
 
 ### Fixed
