@@ -127,6 +127,11 @@ class RoborockClient {
     }
     async returnToDock() {
         this.assertConnected();
+        // First-generation firmware requires pausing before it accepts app_charge.
+        if (this.model === 'rockrobo.vacuum.v1') {
+            this.log.debug(`[Roborock ${this.ip}] Pausing before return to dock`);
+            await this.device.call('app_pause', []);
+        }
         await this.device.call('app_charge', []);
         this.log.info(`[Roborock ${this.ip}] Return to dock`);
     }

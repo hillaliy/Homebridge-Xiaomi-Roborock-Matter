@@ -131,6 +131,8 @@ Room support uses `get_room_mapping` and `app_segment_clean` over the LAN. On st
 
 Matter must be enabled in Homebridge. The plugin registers each configured Roborock as a Matter accessory through the Homebridge Matter API.
 
+Changing cleaning intensity in Apple Home while the vacuum is running requires Homebridge support for `DirectModeChange` ([Homebridge #4001](https://github.com/homebridge/homebridge/pull/4001)). The plugin declares this capability, but Homebridge 2.4.0 does not yet expose it. Use a Homebridge build containing that fix to enable mid-clean mode selection; the LAN fan-speed command itself already works during cleaning.
+
 If the vacuum does not appear:
 
 - Confirm Homebridge Matter is enabled.

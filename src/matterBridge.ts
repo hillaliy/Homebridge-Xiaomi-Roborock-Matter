@@ -275,7 +275,10 @@ export class MatterVacuumBridge {
       this.log.info(`[Matter] Creating new accessory for "${name}" (${this.uuid})`);
     }
 
-    const accessory: MatterAccessory = {
+    // Homebridge #4001 adds this capability; the 2.4.0 types predate it.
+    const accessory: MatterAccessory & {
+      features: { rvcCleanMode: { directModeChange: boolean } };
+    } = {
       // ── Identity ───────────────────────────────────────────────────────────
       UUID: this.uuid,
       displayName: name,
@@ -284,6 +287,9 @@ export class MatterVacuumBridge {
       manufacturer: 'Xiaomi',
       model: this.model,
       firmwareRevision: PLUGIN_VERSION,
+      features: {
+        rvcCleanMode: { directModeChange: true },
+      },
       context: {
         ...(cachedAccessory?.context ?? {}),
         ip,

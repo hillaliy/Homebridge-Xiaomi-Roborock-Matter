@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.14 - 2026-09-08
+
+### Fixed
+
+- Pause first-generation `rockrobo.vacuum.v1` vacuums before sending the return-to-dock command, for both HomeKit Go Home and Stop actions.
+- Declare Matter RVC DirectModeChange support so compatible Homebridge versions can allow cleaning intensity changes while the vacuum is running. Requires a Homebridge build containing homebridge/homebridge#4001; Homebridge 2.4.0 does not yet support this declaration.
+
 ## 1.0.13 - 2026-08-26
 
 ### Changed

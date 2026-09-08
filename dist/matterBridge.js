@@ -234,6 +234,7 @@ class MatterVacuumBridge {
         else {
             this.log.info(`[Matter] Creating new accessory for "${name}" (${this.uuid})`);
         }
+        // Homebridge #4001 adds this capability; the 2.4.0 types predate it.
         const accessory = {
             // ── Identity ───────────────────────────────────────────────────────────
             UUID: this.uuid,
@@ -243,6 +244,9 @@ class MatterVacuumBridge {
             manufacturer: 'Xiaomi',
             model: this.model,
             firmwareRevision: settings_1.PLUGIN_VERSION,
+            features: {
+                rvcCleanMode: { directModeChange: true },
+            },
             context: {
                 ...(cachedAccessory?.context ?? {}),
                 ip,
