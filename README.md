@@ -127,11 +127,44 @@ You can configure the plugin from the Homebridge UI, or add a platform entry man
 
 Room support uses `get_room_mapping` and `app_segment_clean` over the LAN. On startup, the plugin discovers segment IDs and room names before registering the Matter accessory. You can omit `rooms` entirely. Manual entries override a discovered room name with the same segment ID and act as a fallback when discovery is unavailable.
 
+### Manual Room IDs from a Disabled Timer
+
+Some vacuums, including the Roborock S5 reported in [issue #15](https://github.com/hillaliy/Homebridge-Xiaomi-Roborock-Matter/issues/15), return an empty list from `get_room_mapping` even though room cleaning is available in Xiaomi Home. On compatible firmware, a saved cleaning schedule can reveal the segment IDs for manual configuration.
+
+This method requires **room selection in Xiaomi Home's cleaning schedule**. It does not add room support to a vacuum that lacks it. The original `rockrobo.vacuum.v1` supports coordinate-based zone cleaning rather than segment-based room cleaning, so this is not a workaround for that model. See the [miio protocol compatibility table](https://github.com/marcelrv/XiaomiRobotVacuumProtocol).
+
+1. In Xiaomi Home, create a cleaning schedule and select the rooms. Record their selection order and names. Choose a future time so it cannot run while you are setting it up.
+2. Save the schedule and disable it. Leave it disabled throughout this procedure; midnight is not required.
+3. From a computer on the vacuum's LAN, use the miio CLI with the vacuum's IP and your authenticated token setup to read the schedules. Replace the example IP below with your vacuum's IP. This command requires a separately installed miio CLI; it is not a Homebridge UI command.
+
+   ```sh
+   miio protocol call 192.168.1.100 get_timer
+   ```
+
+4. Find the disabled (`"off"`) schedule you created. Its `start_clean` parameters may contain a value such as `"segments": "16,18,19,20,17"`. These are segment IDs, not names or map coordinates. If there are several schedules, identify yours before using its IDs. If no `segments` value is returned, this method is not available from that response.
+5. Match the IDs to the recorded selection order as an initial mapping. Enter them in the plugin's **Rooms** settings in Homebridge UI, or add a `rooms` property to the existing vacuum object inside `devices`. For example:
+
+   ```json
+   "rooms": [
+     { "name": "Hallway", "segmentId": 16 },
+     { "name": "Bathroom", "segmentId": 18 },
+     { "name": "Living Room", "segmentId": 19 },
+     { "name": "Bedroom", "segmentId": 20 },
+     { "name": "Kitchen", "segmentId": 17 }
+   ]
+   ```
+
+   This is a property to insert into your device configuration, not a complete JSON configuration. The names and IDs are examples; use your own values.
+
+6. Save and restart Homebridge. When discovery is empty, look for `Using 5 manually configured room(s)` in the log (with your room count). Test each room individually from Apple Home to confirm the name-to-ID mapping and that cleaning targets the expected room.
+
+The plugin does **not** read, enable, or modify timers automatically. Once the IDs are configured, you can delete the temporary schedule. The commands above and normal plugin control use LAN miio; no Xiaomi account credentials are added to the plugin. If you rebuild the map or change its room divisions, recheck the IDs. Never include your miio token when sharing command output or logs.
+
 ## <img src="https://api.iconify.design/lucide:house-plug.svg" width="18" alt=""> Matter Setup
 
 Matter must be enabled in Homebridge. The plugin registers each configured Roborock as a Matter accessory through the Homebridge Matter API.
 
-Changing cleaning intensity in Apple Home while the vacuum is running requires Homebridge support for `DirectModeChange` ([Homebridge #4001](https://github.com/homebridge/homebridge/pull/4001)). The plugin declares this capability, but Homebridge 2.4.0 does not yet expose it. Use a Homebridge build containing that fix to enable mid-clean mode selection; the LAN fan-speed command itself already works during cleaning.
+Changing cleaning intensity in Apple Home while the vacuum is running requires Homebridge support for `DirectModeChange` ([Homebridge #4001](https://github.com/homebridge/homebridge/pull/4001)). The plugin declares this capability, and support is confirmed in the published `homebridge@2.4.1-beta.11` package. As of September 30, 2026, the latest stable Homebridge release is still `2.4.0`, which does not expose this capability. To try mid-clean mode selection, use that beta or another build containing the fix; otherwise, wait for a stable release containing it. The LAN fan-speed command itself already works during cleaning.
 
 If the vacuum does not appear:
 
