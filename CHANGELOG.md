@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.15 - 2026-11-13
+
+### Added
+
+- Add experimental local MIoT control for the Xiaomi Robot Vacuum S20+ (`xiaomi.vacuum.b108gl`): status, battery, start, pause, resume, return to dock, and suction. Room selection and mop controls are not included for this model.
+
 ## 1.0.14 - 2026-09-08
 
 ### Fixed

@@ -1,5 +1,6 @@
 import { Logger } from 'homebridge';
 import miio from 'miio';
+import { S20_PLUS_MODEL, S20PlusMiot } from './s20PlusMiot';
 
 export type RoborockStatus =
   | 'cleaning'
@@ -102,6 +103,9 @@ export class RoborockClient {
       this.log.info(
         `[Roborock] Connected to ${this.ip} (model: ${this.getModel()})`,
       );
+      if (this.model === S20_PLUS_MODEL) {
+        this.log.info(`[Roborock ${this.ip}] Using local MIoT commands for Xiaomi S20+`);
+      }
     } catch (err) {
       this.log.error(`[Roborock] Failed to connect to ${this.ip}: ${err}`);
       throw err;
@@ -116,9 +120,22 @@ export class RoborockClient {
     return this.model ?? 'Roborock';
   }
 
+  supportsRoomCleaning(): boolean {
+    return this.model !== S20_PLUS_MODEL;
+  }
+
+  private get miot(): S20PlusMiot | undefined {
+    return this.model === S20_PLUS_MODEL
+      ? new S20PlusMiot(this.device)
+      : undefined;
+  }
+
   async getState(): Promise<RoborockState> {
     this.assertConnected();
     this.log.debug(`[Roborock ${this.ip}] Reading status`);
+    const miot = this.miot;
+    if (miot) return miot.getState();
+
     const statusResult = await this.device.call('get_status', []);
 
     const s = statusResult[0] ?? statusResult;
@@ -151,18 +168,39 @@ export class RoborockClient {
 
   async startCleaning(): Promise<void> {
     this.assertConnected();
-    await this.device.call('app_start', []);
+    const miot = this.miot;
+    if (miot) await miot.startCleaning();
+    else await this.device.call('app_start', []);
     this.log.info(`[Roborock ${this.ip}] Start cleaning`);
+  }
+
+  async resumeCleaning(): Promise<void> {
+    this.assertConnected();
+    const miot = this.miot;
+    if (miot) {
+      await miot.resumeCleaning();
+      this.log.info(`[Roborock ${this.ip}] Resume cleaning`);
+    } else {
+      await this.startCleaning();
+    }
   }
 
   async pauseCleaning(): Promise<void> {
     this.assertConnected();
-    await this.device.call('app_pause', []);
+    const miot = this.miot;
+    if (miot) await miot.pauseCleaning();
+    else await this.device.call('app_pause', []);
     this.log.info(`[Roborock ${this.ip}] Pause cleaning`);
   }
 
   async returnToDock(): Promise<void> {
     this.assertConnected();
+    const miot = this.miot;
+    if (miot) {
+      await miot.returnToDock();
+      this.log.info(`[Roborock ${this.ip}] Return to dock`);
+      return;
+    }
     // First-generation firmware requires pausing before it accepts app_charge.
     if (this.model === 'rockrobo.vacuum.v1') {
       this.log.debug(`[Roborock ${this.ip}] Pausing before return to dock`);
@@ -175,6 +213,12 @@ export class RoborockClient {
   async setFanSpeed(speedPercent: number): Promise<void> {
     this.assertConnected();
     const normalizedSpeed = normalizeFanSpeed(speedPercent);
+    const miot = this.miot;
+    if (miot) {
+      await miot.setFanSpeed(normalizedSpeed);
+      this.log.debug(`[Roborock ${this.ip}] MIoT fan speed: ${normalizedSpeed}%`);
+      return;
+    }
     const codeMap = this.usesLegacyFanSpeedCodes()
       ? LEGACY_FAN_SPEED_CODES
       : MODERN_FAN_SPEED_CODES;
@@ -187,6 +231,9 @@ export class RoborockClient {
 
   async cleanSegments(segmentIds: number[]): Promise<void> {
     this.assertConnected();
+    if (!this.supportsRoomCleaning()) {
+      throw new Error('Room cleaning is not supported for the Xiaomi S20+');
+    }
     await this.device.call('app_segment_clean', segmentIds);
     this.log.info(
       `[Roborock ${this.ip}] Clean room segment(s): ${segmentIds.join(', ')}`,
@@ -195,6 +242,7 @@ export class RoborockClient {
 
   async getRoomMapping(): Promise<RoborockRoom[]> {
     this.assertConnected();
+    if (!this.supportsRoomCleaning()) return [];
     this.log.debug(`[Roborock ${this.ip}] Reading room mapping`);
     const result = await this.device.call('get_room_mapping', []);
     this.log.debug(
@@ -235,7 +283,9 @@ export class RoborockClient {
 
   async findRobot(): Promise<void> {
     this.assertConnected();
-    await this.device.call('find_me', []);
+    const miot = this.miot;
+    if (miot) await miot.findRobot();
+    else await this.device.call('find_me', []);
   }
 
   private assertConnected() {

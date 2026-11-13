@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.RoborockClient = void 0;
 const miio_1 = __importDefault(require("miio"));
+const s20PlusMiot_1 = require("./s20PlusMiot");
 /** Maps Roborock status codes to our simplified status enum */
 const STATUS_MAP = {
     1: 'idle', // Initiating
@@ -77,6 +78,9 @@ class RoborockClient {
             this.device = await miio_1.default.device({ address: this.ip, token: this.token });
             this.model = this.device.miioModel ?? null;
             this.log.info(`[Roborock] Connected to ${this.ip} (model: ${this.getModel()})`);
+            if (this.model === s20PlusMiot_1.S20_PLUS_MODEL) {
+                this.log.info(`[Roborock ${this.ip}] Using local MIoT commands for Xiaomi S20+`);
+            }
         }
         catch (err) {
             this.log.error(`[Roborock] Failed to connect to ${this.ip}: ${err}`);
@@ -89,9 +93,20 @@ class RoborockClient {
     getModel() {
         return this.model ?? 'Roborock';
     }
+    supportsRoomCleaning() {
+        return this.model !== s20PlusMiot_1.S20_PLUS_MODEL;
+    }
+    get miot() {
+        return this.model === s20PlusMiot_1.S20_PLUS_MODEL
+            ? new s20PlusMiot_1.S20PlusMiot(this.device)
+            : undefined;
+    }
     async getState() {
         this.assertConnected();
         this.log.debug(`[Roborock ${this.ip}] Reading status`);
+        const miot = this.miot;
+        if (miot)
+            return miot.getState();
         const statusResult = await this.device.call('get_status', []);
         const s = statusResult[0] ?? statusResult;
         let batteryLevel = s.battery ?? 0;
@@ -117,16 +132,41 @@ class RoborockClient {
     }
     async startCleaning() {
         this.assertConnected();
-        await this.device.call('app_start', []);
+        const miot = this.miot;
+        if (miot)
+            await miot.startCleaning();
+        else
+            await this.device.call('app_start', []);
         this.log.info(`[Roborock ${this.ip}] Start cleaning`);
+    }
+    async resumeCleaning() {
+        this.assertConnected();
+        const miot = this.miot;
+        if (miot) {
+            await miot.resumeCleaning();
+            this.log.info(`[Roborock ${this.ip}] Resume cleaning`);
+        }
+        else {
+            await this.startCleaning();
+        }
     }
     async pauseCleaning() {
         this.assertConnected();
-        await this.device.call('app_pause', []);
+        const miot = this.miot;
+        if (miot)
+            await miot.pauseCleaning();
+        else
+            await this.device.call('app_pause', []);
         this.log.info(`[Roborock ${this.ip}] Pause cleaning`);
     }
     async returnToDock() {
         this.assertConnected();
+        const miot = this.miot;
+        if (miot) {
+            await miot.returnToDock();
+            this.log.info(`[Roborock ${this.ip}] Return to dock`);
+            return;
+        }
         // First-generation firmware requires pausing before it accepts app_charge.
         if (this.model === 'rockrobo.vacuum.v1') {
             this.log.debug(`[Roborock ${this.ip}] Pausing before return to dock`);
@@ -138,6 +178,12 @@ class RoborockClient {
     async setFanSpeed(speedPercent) {
         this.assertConnected();
         const normalizedSpeed = normalizeFanSpeed(speedPercent);
+        const miot = this.miot;
+        if (miot) {
+            await miot.setFanSpeed(normalizedSpeed);
+            this.log.debug(`[Roborock ${this.ip}] MIoT fan speed: ${normalizedSpeed}%`);
+            return;
+        }
         const codeMap = this.usesLegacyFanSpeedCodes()
             ? LEGACY_FAN_SPEED_CODES
             : MODERN_FAN_SPEED_CODES;
@@ -147,11 +193,16 @@ class RoborockClient {
     }
     async cleanSegments(segmentIds) {
         this.assertConnected();
+        if (!this.supportsRoomCleaning()) {
+            throw new Error('Room cleaning is not supported for the Xiaomi S20+');
+        }
         await this.device.call('app_segment_clean', segmentIds);
         this.log.info(`[Roborock ${this.ip}] Clean room segment(s): ${segmentIds.join(', ')}`);
     }
     async getRoomMapping() {
         this.assertConnected();
+        if (!this.supportsRoomCleaning())
+            return [];
         this.log.debug(`[Roborock ${this.ip}] Reading room mapping`);
         const result = await this.device.call('get_room_mapping', []);
         this.log.debug(`[Roborock ${this.ip}] Raw room mapping: ${JSON.stringify(result)}`);
@@ -183,7 +234,11 @@ class RoborockClient {
     }
     async findRobot() {
         this.assertConnected();
-        await this.device.call('find_me', []);
+        const miot = this.miot;
+        if (miot)
+            await miot.findRobot();
+        else
+            await this.device.call('find_me', []);
     }
     assertConnected() {
         if (!this.device) {

@@ -1,7 +1,7 @@
 declare module 'miio' {
   interface MiioDevice {
     miioModel?: string;
-    call(method: string, params?: unknown[]): Promise<unknown>;
+    call(method: string, params?: unknown[] | Record<string, unknown>): Promise<unknown>;
     destroy?(): void;
   }
 

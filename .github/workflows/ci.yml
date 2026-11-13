@@ -35,5 +35,8 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Test
+        run: node --test
+
       - name: Verify package contents
         run: npm pack --dry-run

@@ -188,6 +188,12 @@ export class RoborockMatterPlatform implements DynamicPlatformPlugin {
     client: RoborockClient,
   ): Promise<void> {
     const configuredRooms = deviceConfig.rooms ?? [];
+    if (!client.supportsRoomCleaning()) {
+      if (configuredRooms.length) {
+        this.log.warn(`Ignoring configured rooms for "${deviceConfig.name}": room cleaning is not supported for ${client.getModel()}.`);
+      }
+      return;
+    }
 
     try {
       const discoveredRooms = await client.getRoomMapping();

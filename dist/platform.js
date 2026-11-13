@@ -111,6 +111,12 @@ class RoborockMatterPlatform {
     }
     async discoverRooms(deviceConfig, client) {
         const configuredRooms = deviceConfig.rooms ?? [];
+        if (!client.supportsRoomCleaning()) {
+            if (configuredRooms.length) {
+                this.log.warn(`Ignoring configured rooms for "${deviceConfig.name}": room cleaning is not supported for ${client.getModel()}.`);
+            }
+            return;
+        }
         try {
             const discoveredRooms = await client.getRoomMapping();
             if (!discoveredRooms.length) {

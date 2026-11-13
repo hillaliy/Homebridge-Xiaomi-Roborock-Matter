@@ -224,7 +224,7 @@ class MatterVacuumBridge {
     async start() {
         const matter = this.api.matter; // safe: caller has gated on isMatterEnabled()
         const { name, ip } = this.config;
-        const rooms = getConfiguredRooms(this.config);
+        const rooms = this.client.supportsRoomCleaning() ? getConfiguredRooms(this.config) : [];
         const serviceAreaCluster = buildServiceAreaCluster(rooms);
         this.uuid = matter.uuid.generate(`roborock-${ip}`);
         const cachedAccessory = this.cachedAccessories.get(this.uuid);
@@ -290,8 +290,9 @@ class MatterVacuumBridge {
                                     return;
                                 }
                                 this.log.info(`[Matter] "${name}" → start cleaning`);
+                                const wasPaused = this.lastState?.status === 'paused';
                                 this.applyOptimisticState({ status: 'cleaning' });
-                                runInBackground(() => this.client.startCleaning(), (err) => this.log.error(`[Matter] "${name}" async start cleaning error: ${err}`));
+                                runInBackground(() => wasPaused ? this.client.resumeCleaning() : this.client.startCleaning(), (err) => this.log.error(`[Matter] "${name}" async start cleaning error: ${err}`));
                             }
                             else {
                                 if (this.lastState?.status === 'docked' ||
@@ -348,7 +349,7 @@ class MatterVacuumBridge {
                             }
                             this.log.info(`[Matter] "${name}" → resume`);
                             this.applyOptimisticState({ status: 'cleaning' });
-                            runInBackground(() => this.client.startCleaning(), (err) => this.log.error(`[Matter] "${name}" async resume error: ${err}`));
+                            runInBackground(() => this.client.resumeCleaning(), (err) => this.log.error(`[Matter] "${name}" async resume error: ${err}`));
                         }
                         catch (err) {
                             this.log.error(`[Matter] "${name}" resume error: ${err}`);

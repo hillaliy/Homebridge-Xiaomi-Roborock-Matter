@@ -22,8 +22,11 @@ export declare class RoborockClient {
     connect(): Promise<void>;
     isConnected(): boolean;
     getModel(): string;
+    supportsRoomCleaning(): boolean;
+    private get miot();
     getState(): Promise<RoborockState>;
     startCleaning(): Promise<void>;
+    resumeCleaning(): Promise<void>;
     pauseCleaning(): Promise<void>;
     returnToDock(): Promise<void>;
     setFanSpeed(speedPercent: number): Promise<void>;

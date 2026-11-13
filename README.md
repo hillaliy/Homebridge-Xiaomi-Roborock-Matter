@@ -127,6 +127,12 @@ You can configure the plugin from the Homebridge UI, or add a platform entry man
 
 Room support uses `get_room_mapping` and `app_segment_clean` over the LAN. On startup, the plugin discovers segment IDs and room names before registering the Matter accessory. You can omit `rooms` entirely. Manual entries override a discovered room name with the same segment ID and act as a fallback when discovery is unavailable.
 
+### Xiaomi Robot Vacuum S20+ (Experimental)
+
+Configure the S20+ with its local IP address and miio token as above. The plugin detects `xiaomi.vacuum.b108gl` and switches to local MIoT commands automatically. This model supports status and battery reporting, start, pause, resume, return to dock, and suction selection through Matter. Room selection and mop controls are not exposed for the S20+.
+
+This implementation is based on the [Xiaomi MIoT specification](https://miot-spec.org/miot-spec-v2/instance?type=urn:miot-spec-v2:device:vacuum:0000A006:xiaomi-b108gl:1) and is awaiting hardware confirmation in [issue #20](https://github.com/hillaliy/Homebridge-Xiaomi-Roborock-Matter/issues/20). To check that the plugin selected the MIoT path, look for `Using local MIoT commands for Xiaomi S20+` in the Homebridge startup log.
+
 ### Manual Room IDs from a Disabled Timer
 
 Some vacuums, including the Roborock S5 reported in [issue #15](https://github.com/hillaliy/Homebridge-Xiaomi-Roborock-Matter/issues/15), return an empty list from `get_room_mapping` even though room cleaning is available in Xiaomi Home. On compatible firmware, a saved cleaning schedule can reveal the segment IDs for manual configuration.
